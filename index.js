@@ -1,19 +1,17 @@
 'use strict';
 /**
-//========================================== redux-auto
-//======= https://github.com/codemeasandwich/redux-auto
+//========================================= storm-state
+//============ https://github.com/codemeasandwich/storm
 */
 
 import smartAction from './middleware/smartActions.js';
 import webpackModules from './test/webpackModules';
-import fsModules from './test/fsModules';
-import { createStore, applyMiddleware, combineReducers } from 'redux';
 
-function isFunction(value){
-//return ({}).toString.call(value) === '[object Function]';
+function isFunction(value) {
+  //return ({}).toString.call(value) === '[object Function]';
   return value instanceof Function;
 }
-function isObject(value){
+function isObject(value) {
   // TODO: find out why this is braking the tests
   //return !! value && value.constructor === Object;
   return value instanceof Object && !isArray(value);
@@ -21,41 +19,41 @@ function isObject(value){
 
 const isArray = Array.isArray;
 
-function ActionIDGen (reducerName, actionName, stage){
+function ActionIDGen(reducerName, actionName, stage) {
   if (3 === arguments.length)
-    return "@@redux-auto/"+reducerName.toUpperCase() + "/" + actionName.toUpperCase() + "." + stage.toUpperCase();
+    return "@@storm-event/" + reducerName + "/" + actionName + "." + stage;
   else
-    return "@@redux-auto/"+reducerName.toUpperCase() + "/" + actionName.toUpperCase();
+    return "@@storm-event/" + reducerName + "/" + actionName;
 }
 
-const actionsBuilder = {}, actionsBuilderPROTOTYPES = {}, lookup = {}, lifecycle = {}, isAsync={}
+const actionsBuilder = {}, actionsBuilderPROTOTYPES = {}, lookup = {}, lifecycle = {}, isAsync = {}
 const mappingFromReducerActionNameToACTIONID = {};
 const reducersBeforeAutoErrorMessage = "You are trying to get reducers before calling 'auto'. Trying moving applyMiddleware BEFORE combineReducers";
 const reducersAfterCombineReducersErrorMessage = "You need to pass an object of reducers to 'mergeReducers' BEFORE calling combineReducers. Try createStore( combineReducers( mergeReducers(otherReducers) ) )";
 let autoWasCalled = false, reducers = {
-  auto_function_not_call_before_combineReducers: ()=>{
+  auto_function_not_call_before_combineReducers: () => {
     throw new Error(reducersBeforeAutoErrorMessage);
   }
 }
-function chaining(actionType){
+function chaining(actionType) {
 
   const result = chaining[actionType] && chaining[actionType]();
 
-        result && result.then && result.then( action => {
-            if (action && isObject(action) && action.type && action.payload){
-              setTimeout(()=>chaining.dispatcher(action), 0) //TODO: is this timeout need?
-            }
-        })
+  result && result.then && result.then(action => {
+    if (action && isObject(action) && action.type && action.payload) {
+      setTimeout(() => chaining.dispatcher(action), 0) //TODO: is this timeout need?
+    }
+  })
 }
 
-chaining.set = function(fn,actionType, argsArray){
+chaining.set = function (fn, actionType, argsArray) {
   if (undefined === fn) return;
-  chaining[actionType] = ()=>{
+  chaining[actionType] = () => {
 
-    return new Promise((resolve, reject)=> {
-          setTimeout(()=> {
-            resolve( (0 < fn.length) ? fn(...argsArray) : fn() );
-          }, 0)
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve((0 < fn.length) ? fn(...argsArray) : fn());
+      }, 0)
     })
   }
 }
@@ -63,7 +61,7 @@ chaining.set = function(fn,actionType, argsArray){
 const settingsOptions = {}, testingOptions = {};
 let inits = [];
 
-function reset(){
+function reset() {
   Object.keys(settingsOptions).forEach(p => delete settingsOptions[p]);
   Object.keys(testingOptions).forEach(p => delete testingOptions[p]);
   Object.keys(actionsBuilder).forEach(p => delete actionsBuilder[p]);
@@ -75,423 +73,357 @@ function reset(){
 
 } // END reset
 
-function mergeReducers(otherReducers){
-  if(!autoWasCalled)
+function mergeReducers(otherReducers) {
+  if (!autoWasCalled)
     throw new Error(reducersBeforeAutoErrorMessage)
-  if(isFunction(otherReducers))
+  if (isFunction(otherReducers))
     throw new Error(reducersAfterCombineReducersErrorMessage)
-  return Object.assign({},otherReducers, reducers);
+  return Object.assign({}, otherReducers, reducers);
 } // END mergeReducers
 
 function names(key) {
   if (undefined === names[key]) {
     names[key] = {
-      actionName:key.match(/([^\/]+)(?=\.\w+$)/)[0],
-      reducerName:key.match(/(.*)[\/\\]/)[1].substring(2)
+      actionName: key.match(/([^\/]+)(?=\.\w+$)/)[0],
+      reducerName: key.match(/(.*)[\/\\]/)[1].substring(2)
     }
   }
   return names[key]
 }
 
-function buildActionLayout(fileNameArray){
+function buildActionLayout(fileNameArray) {
 
-    fileNameArray.forEach(function(key){
-      const {actionName, reducerName } = names(key);
+  fileNameArray.forEach(function (key) {
+    const { actionName, reducerName } = names(key);
 
-      // get action name starts with _ skip it
-      if("_" === actionName[0] || null === reducerName || "index" === actionName)
-          return;
-      actionsBuilderPROTOTYPES[reducerName] = {} // this is used of, e.g: if(action.type in actions.users) ~ trying to see if an type map to the reducer
-      actionsBuilder[reducerName] = actionsBuilder[reducerName] ||  Object.create(actionsBuilderPROTOTYPES[reducerName]);
-      actionsBuilder[reducerName][actionName] = (...args) => actionsBuilder[reducerName][actionName](...args);
-      actionsBuilder[reducerName][actionName].clear = (...args) => actionsBuilder[reducerName][actionName].clear(...args);
+    // get action name starts with _ skip it
+    if ("_" === actionName[0] || null === reducerName || "index" === actionName)
+      return;
+    actionsBuilderPROTOTYPES[reducerName] = {} // this is used of, e.g: if(action.type in actions.users) ~ trying to see if an type map to the reducer
+    actionsBuilder[reducerName] = actionsBuilder[reducerName] || Object.create(actionsBuilderPROTOTYPES[reducerName]);
+    actionsBuilder[reducerName][actionName] = (...args) => actionsBuilder[reducerName][actionName](...args);
+    actionsBuilder[reducerName][actionName].clear = (...args) => actionsBuilder[reducerName][actionName].clear(...args);
   })
 } // END buildActionLayout
- 
- function auto (modules, fileNameArray, settings){
 
-   if("object" === typeof modules && arguments.length === 1){
-     Object.keys(modules).forEach(reducers =>{
-       Object.keys(modules[reducers]).forEach(actionName =>{ 
-         Object.keys(modules[reducers][actionName]).forEach(fnType =>{
-           webpackModules.set(reducers,actionName,fnType,modules[reducers][actionName][fnType]);
-         })
-       })
-     })
-     return auto(webpackModules, webpackModules.keys())
-   } // END if
 
-   autoWasCalled = true;
-   //reset();
+
+function auto(modules, fileNameArray) {
+
+  if ("object" === typeof modules && arguments.length === 1) {
+    Object.keys(modules).forEach(reducers => {
+      Object.keys(modules[reducers]).forEach(actionName => {
+        Object.keys(modules[reducers][actionName]).forEach(fnType => {
+          webpackModules.set(reducers, actionName, fnType, modules[reducers][actionName][fnType]);
+        })
+      })
+    })
+    return auto(webpackModules, webpackModules.keys())
+  } // END if
+
+  autoWasCalled = true;
+  //reset();
   delete reducers.auto_function_not_call_before_combineReducers;
-  if (! settings || settings.skipBuildActionLayout) {
-    //default is to buildActionLayout
-    buildActionLayout(fileNameArray);
-  }
-  
+  buildActionLayout(fileNameArray);
 
-  if(testingOptions.preOnly) return;
+  if (testingOptions.preOnly) return;
 
-  const actionsImplementation = fileNameArray.reduce((actionsImplementation, key)=>{
+  const actionsImplementation = fileNameArray.reduce((actionsImplementation, key) => {
 
-  const { actionName, reducerName } = names(key);
+    const { actionName, reducerName } = names(key);
 
-  if(actionName.substr(-".test".length)    === ".test"
-  || actionName.substr(-".test.js".length) === ".test.js" ){
-    return actionsImplementation;
-  }
+    if (actionName.substr(-".test".length) === ".test"
+      || actionName.substr(-".test.js".length) === ".test.js") {
+      return actionsImplementation;
+    }
 
-  if(0<=actionName.indexOf("."))
+    if (0 <= actionName.indexOf("."))
       throw new Error(`file ${actionName} in ${reducerName} contains a DOT in its name`)
-  if(0<=reducerName.indexOf("."))
+    if (0 <= reducerName.indexOf("."))
       throw new Error(`the folder ${reducerName} contains a DOT in its name`)
 
-  // get action name starts with _ skip it
-  if("_" === actionName[0] || null === reducerName)
+    // get action name starts with _ skip it
+    if ("_" === actionName[0] || null === reducerName)
       return actionsImplementation;
 
-  lookup[reducerName] = lookup[reducerName] || {};
-  lookup[reducerName][actionName] = modules(key).default || {};
-  lookup[reducerName][actionName].pending   = modules(key).pending   || modules(key).PENDING;
-  lookup[reducerName][actionName].fulfilled = modules(key).fulfilled || modules(key).FULFILLED;
-  lookup[reducerName][actionName].rejected  = modules(key).rejected  || modules(key).REJECTED;
+    lookup[reducerName] = lookup[reducerName] || {};
+    lookup[reducerName][actionName] = modules(key).default || {};
+    lookup[reducerName][actionName].pending = modules(key).pending || modules(key).PENDING;
+    lookup[reducerName][actionName].fulfilled = modules(key).fulfilled || modules(key).FULFILLED;
+    lookup[reducerName][actionName].rejected = modules(key).rejected || modules(key).REJECTED;
 
-  isAsync[reducerName] = isAsync[reducerName]||!!modules(key).action
+    isAsync[reducerName] = isAsync[reducerName] || !!modules(key).action
 
-  lifecycle[reducerName] = lifecycle[reducerName] || { // defaults
-    before : function defaultBefore(   oldstate, action)           { return action.payload },
-    after  : function defaultAfter(updatedState, action, oldState) { return updatedState }
-  };
+    lifecycle[reducerName] = lifecycle[reducerName] || { // defaults
+      before: function defaultBefore(oldstate, action) { return action.payload },
+      after: function defaultAfter(updatedState, action, oldState) { return updatedState }
+    };
 
-  if ("index" === actionName) {
-    lifecycle[reducerName].after  = modules(key).after  || modules(key).AFTER  || lifecycle[reducerName].after;
-    lifecycle[reducerName].before = modules(key).before || modules(key).BEFORE || lifecycle[reducerName].before;
-  }
+    if ("index" === actionName) {
+      lifecycle[reducerName].after = modules(key).after || modules(key).AFTER || lifecycle[reducerName].after;
+      lifecycle[reducerName].before = modules(key).before || modules(key).BEFORE || lifecycle[reducerName].before;
+    }
 
-  const ACTIONID = ActionIDGen(reducerName, actionName);
-  mappingFromReducerActionNameToACTIONID[reducerName] = mappingFromReducerActionNameToACTIONID[reducerName] || {}
-  mappingFromReducerActionNameToACTIONID[reducerName][ACTIONID] = actionName;
+    const ACTIONID = ActionIDGen(reducerName, actionName);
+    mappingFromReducerActionNameToACTIONID[reducerName] = mappingFromReducerActionNameToACTIONID[reducerName] || {}
+    mappingFromReducerActionNameToACTIONID[reducerName][ACTIONID] = actionName;
 
-  if(!(reducerName in reducers)){
-    reducers[reducerName] = (data, action) => {
+    if (!(reducerName in reducers)) {
+      reducers[reducerName] = (data, action) => {
 
-      const avabileActions = lookup[reducerName];
-      const actionFragments = action.type.split(".");
+        let loading_proto;
 
-      const avabileAction = mappingFromReducerActionNameToACTIONID[reducerName][actionFragments[0]];
+        if (action.__AUTO_loadingAsync_proto_) {
+          loading_proto = action.__AUTO_loadingAsync_proto_
+          action = Object.assign({}, action)
+        }
 
-      const payload = lifecycle[reducerName].before(data, action);
+        const avabileActions = lookup[reducerName];
+        const actionFragments = action.type.split(".");
 
-      // redux-auto ALLOWS has an object payload (other like '@@redux/INIT' will not)
-      // before should return a payload object
-      //if("object" === typeof action.payload && "object" !== typeof payload)//
-      if( isObject(action.payload) && ! isObject(payload))
-      throw new Error(`${reducerName}-before returned a "${typeof payload}" should be a payload object`)
+        const avabileAction = mappingFromReducerActionNameToACTIONID[reducerName][actionFragments[0]];
 
-      let newState = data;
-      let newAsyncVal = false
-      let async = data ? data.__proto__.async : {};
+        const payload = lifecycle[reducerName].before(data, action);
 
-      if(avabileAction in avabileActions){
+        // redux-auto ALLOWS has an object payload (other like '@@redux/INIT' will not)
+        // before should return a payload object
+        //if("object" === typeof action.payload && "object" !== typeof payload)//
+        if (isObject(action.payload) && !isObject(payload))
+          throw new Error(`${reducerName}-before returned a "${typeof payload}" should be a payload object`)
 
-        if(actionFragments.length === 2){
+        let newState = data;
+        let newAsyncVal = false
+        let async = data ? data.__proto__.async : {};
 
-          newAsyncVal = true;
-          const stage = actionFragments[1].toLowerCase();
+        if (avabileAction in avabileActions) {
 
-          async = Object.assign({}, async);
+          if (actionFragments.length === 2) {
 
-          if( "clear" === stage ){
-            async[avabileAction] = undefined;
-          } else {
+            newAsyncVal = true;
+            const stage = actionFragments[1].toLowerCase();
 
-                let clearFn;
-                if( "rejected" === stage ){
-                  clearFn = payload.clear;
-                  delete payload.clear;
-                }
+            async = Object.assign({}, async);
+
+            if ("clear" === stage) {
+              async[avabileAction] = undefined;
+            } else {
+
+              let clearFn;
+              if ("rejected" === stage) {
+                clearFn = payload.clear;
+                delete payload.clear;
+              }
 
               //    if(  stage === "pending" || stage === "fulfilled" || stage === "rejected" ){
-                if (isFunction(lookup[reducerName][avabileAction][stage])){
-                  const argsArray = [data, action.reqPayload, payload];
-                  newState = lookup[reducerName][avabileAction][stage](...argsArray);
-                  chaining.set(lookup[reducerName][avabileAction][stage].chain,action.type,argsArray);
-                } else {
-                  const argsArray = [data, action.reqPayload, actionFragments[1], payload];
-                  newState = lookup[reducerName][avabileAction](...argsArray);
-                  chaining.set(lookup[reducerName][avabileAction].chain,action.type,argsArray)
-                } // END else
+              if (isFunction(lookup[reducerName][avabileAction][stage])) {
+                const argsArray = [data, action.reqPayload, payload];
+                newState = lookup[reducerName][avabileAction][stage](...argsArray);
+                chaining.set(lookup[reducerName][avabileAction][stage].chain, action.type, argsArray);
+              } else {
+                const argsArray = [data, action.reqPayload, actionFragments[1], payload];
+                newState = lookup[reducerName][avabileAction](...argsArray);
+                chaining.set(lookup[reducerName][avabileAction].chain, action.type, argsArray)
+              } // END else
 
-                async[avabileAction] = (stage === "pending") ? true : (stage === "fulfilled") ? false : payload;
+              async[avabileAction] = (stage === "pending") ? true : (stage === "fulfilled") ? false : payload;
 
-                if(clearFn)//(async[avabileAction] instanceof Error){
-                  async[avabileAction].clear = clearFn
-           } // END else "clear" !== stage
-        } else {
-          const argsArray = [data, payload]
-          newState = lookup[reducerName][avabileAction](...argsArray);
-          chaining.set(lookup[reducerName][avabileAction].chain,action.type,argsArray);
+              if (clearFn)//(async[avabileAction] instanceof Error){
+                async[avabileAction].clear = clearFn
+            } // END else "clear" !== stage
+          } else {
+            const argsArray = [data, payload]
+            newState = lookup[reducerName][avabileAction](...argsArray);
+            chaining.set(lookup[reducerName][avabileAction].chain, action.type, argsArray);
+          }
+        } else {// if("index" in lookup[reducerName]){
+
+          newState = lookup[reducerName].index(data, Object.assign({}, action, { payload }))
         }
-      } else {// if("index" in lookup[reducerName]){
 
-        newState = lookup[reducerName].index(data, Object.assign({},action, {payload}))
-      }
+        newState = lifecycle[reducerName].after(newState, action, data);
 
-      newState = lifecycle[reducerName].after(newState, action, data);
-
-      // check if newState's prototype is the shared Object?
-      //console.log (action.type, newState, ({}).__proto__ === newState.__proto__)
-
+        // check if newState's prototype is the shared Object?
+        //console.log (action.type, newState, ({}).__proto__ === newState.__proto__)
 
         if (newAsyncVal || (newState && isAsync[reducerName] && !newState.__proto__.async)) {
 
-        if(isObject(newState)){
+          if (loading_proto) {
+            loading_proto[reducerName] = loading_proto[reducerName] || {}
+            loading_proto[reducerName][actionName] = async
+          }
+          if (isObject(newState)) {
 
-          const _newProto_ = {}
-          Object.defineProperty(_newProto_,"async",  {enumerable:false, writable: false, value: async})
-          Object.defineProperty(_newProto_,"loading",{enumerable:false, writable: false, value: async})
+            const _newProto_ = {}
+            Object.defineProperty(_newProto_, "async", { enumerable: false, writable: false, value: async })
+            Object.defineProperty(_newProto_, "loading", { enumerable: false, writable: false, value: async })
 
-          //const newStateWithAsync = Object.create(Object.assign(Object.create(newState.__proto__),{async}));
-          const newStateWithAsync = Object.create(_newProto_);
-          newState = Object.assign(newStateWithAsync,newState); // clone object
+            //const newStateWithAsync = Object.create(Object.assign(Object.create(newState.__proto__),{async}));
+            const newStateWithAsync = Object.create(_newProto_);
+            newState = Object.assign(newStateWithAsync, newState); // clone object
 
-        }else if(isArray(newState)){
-          // I am a redux-auto proto
-          const _newProto_ = Object.create(Array.prototype)
+          } else if (isArray(newState)) {
+            // I am a redux-auto proto
+            const _newProto_ = Object.create(Array.prototype)
 
-          Object.defineProperty(_newProto_,"async",  {enumerable:false, writable: false, value: async})
-          Object.defineProperty(_newProto_,"loading",{enumerable:false, writable: false, value: async})
+            Object.defineProperty(_newProto_, "async", { enumerable: false, writable: false, value: async })
+            Object.defineProperty(_newProto_, "loading", { enumerable: false, writable: false, value: async })
 
-          newState = newState.slice(0); // clone array
+            newState = newState.slice(0); // clone array
 
-          newState.__proto__ = _newProto_;
-        } // END isArray
-      } // END if(newAsyncVal)
+            newState.__proto__ = _newProto_;
+          } // END isArray
+        } // END if(newAsyncVal)
 
-      return newState
+        return newState
 
-    } // END reducers[reducerName] = (data, action) => {
-  } // END !(reducerName in reducers)
+      } // END reducers[reducerName] = (data, action) => {
+    } // END !(reducerName in reducers)
 
-  // !! index reduers DONT get to overload the action.. sorry :) !!
-  if("index" !== actionName){
+    // !! index reduers DONT get to overload the action.. sorry :) !!
+    if ("index" !== actionName) {
 
-    const actionPreProcessor = modules(key).action;
-    // actionsBuilder[reducerName] = actionsBuilder[reducerName] || {};
+      const actionPreProcessor = modules(key).action;
+      // actionsBuilder[reducerName] = actionsBuilder[reducerName] || {};
 
-    actionsImplementation[reducerName] = actionsImplementation[reducerName] ||  Object.create(actionsBuilderPROTOTYPES[reducerName]);
+      actionsImplementation[reducerName] = actionsImplementation[reducerName] || Object.create(actionsBuilderPROTOTYPES[reducerName]);
 
-    actionsImplementation[reducerName][actionName] = (payload,getState) => {
-    //actionsBuilder[reducerName][actionName] = (payload,getState) => {
+      actionsImplementation[reducerName][actionName] = (payload, getState) => {
+        //actionsBuilder[reducerName][actionName] = (payload,getState) => {
 
-        if(actionPreProcessor){
-          if(1 < actionPreProcessor.length){
-            return { type: ACTIONID, payload:actionPreProcessor(payload,getState()[reducerName])}
+        if (actionPreProcessor) {
+          if (1 < actionPreProcessor.length) {
+            return { type: ACTIONID, payload: actionPreProcessor(payload, getState()[reducerName]) }
           } // else
-          return { type: ACTIONID, payload:actionPreProcessor(payload) }
+          return { type: ACTIONID, payload: actionPreProcessor(payload) }
         } // else
         return { type: ACTIONID, payload }
-    } // END actionsBuilder[reducerName][actionName] = (payload = {}) => {
-  } // END if(actionName !== "index")
-  return actionsImplementation
-},{}); //END reduce
+      } // END actionsBuilder[reducerName][actionName] = (payload = {}) => {
+    } // END if(actionName !== "index")
+    return actionsImplementation
+  }, {}); //END reduce
 
-//+++++++ replace the place-holders after fully loaded
-//++++++++++++++++++++++++++++++++++++++++++++++++++++
+  //+++++++ replace the place-holders after fully loaded
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Object.assign(actionsBuilder,actionsImplementation);
+  Object.assign(actionsBuilder, actionsImplementation);
 
-//+++++++++++++++++++++++++ wrap actions with dispatch
-//++++++++++++++++++++++++++++++++++++++++++++++++++++
+  //+++++++++++++++++++++++++ wrap actions with dispatch
+  //++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  return function setDispatch ({ getState, dispatch}) {
+  return function setDispatch({ getState, dispatch }) {
 
-   chaining.dispatcher = dispatch
+    chaining.dispatcher = dispatch
 
-   Object.keys(actionsBuilder).forEach( (reducerName) => {
+    Object.keys(actionsBuilder).forEach((reducerName) => {
 
-        Object.keys(actionsBuilder[reducerName]).forEach( (actionName) => {
-          // hold a ref to the root Fn
-          const actionDataFn = actionsBuilder[reducerName][actionName];
-          // replace the mapping object pointer the wrappingFn
-          actionsBuilder[reducerName][actionName] = function(payload = {}) {
+      Object.keys(actionsBuilder[reducerName]).forEach((actionName) => {
+        // hold a ref to the root Fn
+        const actionDataFn = actionsBuilder[reducerName][actionName];
+        // replace the mapping object pointer the wrappingFn
+        actionsBuilder[reducerName][actionName] = function (payload = {}) {
 
-          if(arguments.length > 0 && undefined === arguments[0] || ! isObject(payload)){
+          if (arguments.length > 0 && undefined === arguments[0] || !isObject(payload)) {
             throw new Error(`${typeof arguments[0]} was passed as payload to ${reducerName}.${actionName}. This need to be an object. Check you have not misspelled of the variable`);
           }
 
-            const wrappingFn = actionsBuilder[reducerName][actionName];
+          const wrappingFn = actionsBuilder[reducerName][actionName];
 
-            const actionOutput = actionDataFn(payload,getState)
-            //should be able to cancel an action by returning undefined from the action
-            if(undefined === actionOutput.payload){
-              return;
-            } else if(isObject(actionOutput.payload)){
-              if(isFunction(actionOutput.payload.then)){
+          const actionOutput = actionDataFn(payload, getState)
+          //should be able to cancel an action by returning undefined from the action
+          if (undefined === actionOutput.payload) {
+            return;
+          } else if (isObject(actionOutput.payload)) {
+            if (isFunction(actionOutput.payload.then)) {
 
-                wrappingFn.pending   = ActionIDGen(reducerName, actionName,"pending");
-                wrappingFn.fulfilled = ActionIDGen(reducerName, actionName,"fulfilled");
-                wrappingFn.rejected  = ActionIDGen(reducerName, actionName,"rejected");
-                const clearType      = ActionIDGen(reducerName, actionName,"clear");
-                wrappingFn.clear     = ()=> dispatch({type:clearType})
-                wrappingFn.clear.toString = ()=> clearType
-                actionsBuilderPROTOTYPES[reducerName][wrappingFn.pending]   = actionName;
-                actionsBuilderPROTOTYPES[reducerName][wrappingFn.fulfilled] = actionName;
-                actionsBuilderPROTOTYPES[reducerName][wrappingFn.rejected]  = actionName;
-                actionsBuilderPROTOTYPES[reducerName][clearType]            = actionName;
+              wrappingFn.pending = ActionIDGen(reducerName, actionName, "pending");
+              wrappingFn.fulfilled = ActionIDGen(reducerName, actionName, "fulfilled");
+              wrappingFn.rejected = ActionIDGen(reducerName, actionName, "rejected");
+              const clearType = ActionIDGen(reducerName, actionName, "clear");
+              wrappingFn.clear = () => dispatch({ type: clearType })
+              wrappingFn.clear.toString = () => clearType
+              actionsBuilderPROTOTYPES[reducerName][wrappingFn.pending] = actionName;
+              actionsBuilderPROTOTYPES[reducerName][wrappingFn.fulfilled] = actionName;
+              actionsBuilderPROTOTYPES[reducerName][wrappingFn.rejected] = actionName;
+              actionsBuilderPROTOTYPES[reducerName][clearType] = actionName;
 
-                dispatch({type:wrappingFn.pending, reqPayload:payload, payload:null})
-                chaining(wrappingFn.pending)
+              dispatch({ type: wrappingFn.pending, reqPayload: payload, payload: null })
+              chaining(wrappingFn.pending)
 
-                const handleErrors = err => { // only handle external error
-                  err.clear = ()=>{dispatch({type:clearType})};
-                  dispatch({type:wrappingFn.rejected, reqPayload:payload, payload:err})
-                  chaining(wrappingFn.rejected)
-                }
+              const handleErrors = err => { // only handle external error
+                err.clear = () => { dispatch({ type: clearType }) };
+                //console.info({type:wrappingFn.rejected, reqPayload:payload, payload:err})
+                dispatch({ type: wrappingFn.rejected, reqPayload: payload, payload: err })
+                chaining(wrappingFn.rejected)
+              }
 
-                actionOutput.payload
+              actionOutput.payload
                 .then(result => {
-                    if((settings && true === settings       .smartActions) ||
-                       (            true === settingsOptions.smartActions)){
-                      const smartActionOutPut = smartAction(result)
-                      if(smartActionOutPut){
-                        smartActionOutPut
+
+                  if (true === settingsOptions.smartActions) {
+                    const smartActionOutPut = smartAction(result)
+                    if (smartActionOutPut) {
+                      smartActionOutPut
                         .then(grafeQLPayload => {
-                          dispatch({type:wrappingFn.fulfilled, reqPayload:payload, payload:grafeQLPayload })
+                          dispatch({ type: wrappingFn.fulfilled, reqPayload: payload, payload: grafeQLPayload })
                           chaining(wrappingFn.fulfilled)
                         })
-                        .catch( errors => {
-                           if(Array.isArray(errors)){
-                             errors.forEach(handleErrors)
-                           } else {
-                             handleErrors(errors)
-                           }
+                        .catch(errors => {
+                          if (Array.isArray(errors)) {
+                            errors.forEach(handleErrors)
+                          } else {
+                            handleErrors(errors)
+                          }
                         })
-                        return;
-                      }else
-                      if(result.hasOwnProperty("ok")
-                      && ! result.ok){
+                      return;
+                    } else
+                      if (result.hasOwnProperty("ok")
+                        && !result.ok) {
                         handleErrors(result);
                         return;
                       }
-                    } // END settingsOptions.smartActions
+                  } // END settingsOptions.smartActions
 
-                  dispatch({type:wrappingFn.fulfilled, reqPayload:payload, payload:result })
+                  dispatch({ type: wrappingFn.fulfilled, reqPayload: payload, payload: result })
                   chaining(wrappingFn.fulfilled)
-                },handleErrors).catch(handleErrors)
-              } else {
-                dispatch(actionOutput);
-                chaining(actionOutput.type)
-              }
-            } else {// if(undefined === actionOutput.payload)
-              // because an action-middlware my set a simple value
-              throw new Error("action with bad payload:"+actionOutput.type+" >> "+JSON.stringify(actionOutput.payload))
+                }, handleErrors).catch(handleErrors)
+            } else {
+              dispatch(actionOutput);
+              chaining(actionOutput.type)
             }
-          } // END actionsBuilder[reducerName][actionName] = (payload = {}) =>
-          const ACTIONID = ActionIDGen(reducerName, actionName);
-          actionsBuilder          [reducerName][actionName].toString = () => ACTIONID;
-          actionsBuilderPROTOTYPES[reducerName][ACTIONID]            =      actionName; // a reverse mapping
-          //Object.freeze(actionDataFn)
-          //actionDataFn.valueOf  = () => Symbol(ACTIONID); // double equales: (()=>{}) == Symbol *true
-        })
-        // if there is an initialization action, fire it!!
-        const init = actionsBuilder[reducerName].init || actionsBuilder[reducerName].INIT
-        if (isFunction(init) && actionsImplementation[reducerName]) {
-            inits.push(init);
-        }
-   }) // END forEach
-    setTimeout(()=>{
+          } else {// if(undefined === actionOutput.payload)
+            // because an action-middlware my set a simple value
+            throw new Error("action with bad payload:" + actionOutput.type + " >> " + JSON.stringify(actionOutput.payload))
+          }
+        } // END actionsBuilder[reducerName][actionName] = (payload = {}) =>
+        const ACTIONID = ActionIDGen(reducerName, actionName);
+        actionsBuilder[reducerName][actionName].toString = () => ACTIONID;
+        actionsBuilderPROTOTYPES[reducerName][ACTIONID] = actionName; // a reverse mapping
+        //Object.freeze(actionDataFn)
+        //actionDataFn.valueOf  = () => Symbol(ACTIONID); // double equales: (()=>{}) == Symbol *true
+      })
+      // if there is an initialization action, fire it!!
+      const init = actionsBuilder[reducerName].init || actionsBuilder[reducerName].INIT
+      if (isFunction(init)) {
+        inits.push(init);
+      }
+    }) // END forEach
+    setTimeout(() => {
       if (inits.length) {
         inits.forEach(init => init({}))
       }
-    },0) // END setTimeout
+    }) // END setTimeout
     return next => action => next(action)
- } // END setDispatch
- 
+  }
 } // END of auto
 
-function waitOfInitStore(store, timeToWait,limitStoreToLoad) {
-  
-  limitStoreToLoad = limitStoreToLoad || Object.keys(store.getState())
-  return new Promise((resolve, reject)=> {
-  //console.log("Before limitStoreToLoad",limitStoreToLoad)
-    let reducerWithInits = limitStoreToLoad.reduce((all,path)=>{
-      const { actionName, reducerName } = names(path)
-      if ("INIT" === actionName.toUpperCase()) {
-          all.push(reducerName)
-      }
-      return all
-    },[]) // END reduce
-    
-  //console.log("After limitStoreToLoad",reducerWithInits)
-  let handleTimeOut = ()=>{}
-  if (timeToWait) {
-    //console.log(timeToWait)
-    const timeout = setTimeout(()=>{
-          reject(new Error(`Store setup is taking to long! ${reducerWithInits.join()} init${reducerWithInits.length > 1 ? "s":""} did NOT complete`));
-    },timeToWait);
-    handleTimeOut = ()=>{
-   // console.log("handleTimeOut")
-    clearTimeout(timeout)
-    }
-  }
-    
-    
-    
-    store.lesionForActions(({type})=>{
-      
-    
-  //console.log("IN lesionForActions",type)
-      if(type.endsWith("INIT.FULFILLED")){
-        reducerWithInits = reducerWithInits.filter(reducerWithInit => ! type.includes(`/${reducerWithInit}/`.toUpperCase()));
-      }
-      //  console.log("reducerWithInits",reducerWithInits)
-      if (0 === reducerWithInits.length) {
-          handleTimeOut();
-          resolve(store);
-      }
-    }) // END store.lesionForActions
-      
-  }); // END new Promise
-} // END waitOfInitStore
-
-function filterSubStore(fileNameArray, loadSubStore){
-   return fileNameArray.filter(fileName => loadSubStore.some(name => fileName.includes(`${name}/`) ||
-                                                                     fileName.includes(`${name}\\`)))
-} // END filterSubStore
-
 auto.reset = reset;
-auto.settings = function settings(options){
-  Object.assign(settingsOptions,options)
+auto.settings = function settings(options) {
+  Object.assign(settingsOptions, options)
 }
 
-auto.testing = function testing(options){
-  Object.assign(testingOptions,options)
+auto.testing = function testing(options) {
+  Object.assign(testingOptions, options)
 }
-
-// Just calling genStore() without args, will load the complete store
-function genStore(webpackModules, subStoreToLoad, waitTime){
-  reset()
-  const webpackModulesKeys = webpackModules.keys()
-  const limitStoreToLoad = 1 === arguments.length ? webpackModulesKeys : filterSubStore(webpackModulesKeys,subStoreToLoad)
-  buildActionLayout(webpackModulesKeys);
-  const middleware = applyMiddleware( auto(webpackModules, limitStoreToLoad,{skipBuildActionLayout:true}))
-  const cbs = []  
-  const store = createStore(combineReducers(Object.assign({},
-    reducers,{
-      checkIfAllActions_init_fulfilled:(state,action)=>{
-        cbs.forEach(cb=> cb(action))
-        return null
-      }
-    })), middleware);
-  store.lesionForActions = (cb)=> {
-    cbs.push(cb)
-  }
-  
-  const storeReadyPromise = waitOfInitStore(store, waitTime,limitStoreToLoad);
-        storeReadyPromise.store = store
-  return storeReadyPromise
-} // END genStore
 
 export default actionsBuilder;
-export { auto, mergeReducers, reducers, filterSubStore, fsModules, genStore }
+export { auto, mergeReducers, reducers }
